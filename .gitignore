@@ -1,3 +1,5 @@
 .idea
-/docker/data/*
-/docker/logs/*
+/docker/data/mysql/*
+/docker/logs/apache2/*.log
+/docker/logs/mysql/*.log
+/docker/logs/xdebug/*.log
