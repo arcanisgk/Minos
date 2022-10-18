@@ -1,9 +1,9 @@
-version: "3"
+version: "3.9"
 
 services:
   webserver:
     build:
-      context: ./docker/bin/${PHPVERSION}
+      context: ./bin/${PHPVERSION}
     container_name: "${COMPOSE_PROJECT_NAME}-${PHPVERSION}"
     restart: "always"
     ports:
@@ -12,12 +12,12 @@ services:
     links:
       - database
     volumes:
-      - ${DOCUMENT_ROOT-./public}:/var/www/html:rw
-      - ${PHP_INI-./docker/config/php/php.ini}:/usr/local/etc/php/php.ini
-      - ${SSL_DIR-./docker/config/ssl}:/etc/apache2/ssl/
-      - ${VHOSTS_DIR-./docker/config/vhosts}:/etc/apache2/sites-enabled
-      - ${LOG_DIR-./docker/logs/apache2}:/var/log/apache2
-      - ${XDEBUG_LOG_DIR-./docker/logs/xdebug}:/var/log/xdebug
+      - ${DOCUMENT_ROOT-./../public}:/var/www/html:rw
+      - ${PHP_INI-./config/php/php.ini}:/usr/local/etc/php/php.ini
+      - ${SSL_DIR-./config/ssl}:/etc/apache2/ssl/
+      - ${VHOSTS_DIR-./config/vhosts}:/etc/apache2/sites-enabled
+      - ${LOG_DIR-./logs/apache2}:/var/log/apache2
+      - ${XDEBUG_LOG_DIR-./logs/xdebug}:/var/log/xdebug
     environment:
       APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT-/var/www/html}
       PMA_PORT: ${HOST_MACHINE_PMA_PORT}
@@ -31,15 +31,15 @@ services:
       - "host.docker.internal:host-gateway"
   database:
     build:
-      context: "./docker/bin/${DATABASE}"
+      context: "./bin/${DATABASE}"
     container_name: "${COMPOSE_PROJECT_NAME}-${DATABASE}"
     restart: "always"
     ports:
       - "127.0.0.1:${HOST_MACHINE_MYSQL_PORT}:3306"
     volumes:
-      - ${MYSQL_INITDB_DIR-./docker/config/initdb}:/docker-entrypoint-initdb.d
-      - ${MYSQL_DATA_DIR-./docker/data/mysql}:/var/lib/mysql
-      - ${MYSQL_LOG_DIR-./docker/logs/mysql}:/var/log/mysql
+      - ${MYSQL_INITDB_DIR-./config/initdb}:/docker-entrypoint-initdb.d
+      - ${MYSQL_DATA_DIR-./data/mysql}:/var/lib/mysql
+      - ${MYSQL_LOG_DIR-./logs/mysql}:/var/log/mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -65,7 +65,7 @@ services:
       - "${HOST_MACHINE_PMA_SECURE_PORT}:443"
     volumes:
       - /sessions
-      - ${PHP_INI-./docker/config/php/php.ini}:/usr/local/etc/php/conf.d/php-phpmyadmin.ini
+      - ${PHP_INI-./config/php/php.ini}:/usr/local/etc/php/conf.d/php-phpmyadmin.ini
   redis:
     container_name: "${COMPOSE_PROJECT_NAME}-redis"
     image: redis:latest
