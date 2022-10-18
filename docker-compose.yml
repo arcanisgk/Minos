@@ -1,54 +1,73 @@
-version: "3.9"
+version: "3"
+
 services:
-  mysql:
-    container_name: mysql
-    image: 'mysql:8.0'
-    working_dir: /application
-    command: --default-authentication-plugin=mysql_native_password
-    restart: always
-    volumes:
-      - '.:/application'
-    environment:
-      - MYSQL_ROOT_PASSWORD=1qazxsw22
-      - MYSQL_DATABASE=minos
-      - MYSQL_USER=minos
-      - MYSQL_PASSWORD=1qazxsw22
-    ports:
-      - "3308:3306"
   webserver:
-    container_name: webserver
-    image: nginx:latest
-    working_dir: /application
-    volumes:
-      - '.:/application'
-      - './conf-example/docker-setup/nginx/nginx.conf:/etc/nginx/conf.d/default.conf'
+    build:
+      context: ./docker/bin/${PHPVERSION}
+    container_name: "${COMPOSE_PROJECT_NAME}-${PHPVERSION}"
+    restart: "always"
     ports:
-      - '8008:80'
-    depends_on:
-      - mysql
+      - "${HOST_MACHINE_UNSECURE_HOST_PORT}:80"
+      - "${HOST_MACHINE_SECURE_HOST_PORT}:443"
     links:
-      - mysql
-  php-fpm:
-    build: ./
-    working_dir: /application
+      - database
     volumes:
-      - '.:/application'
-      - './conf-example/docker-setup/php-fpm/php-ini-overrides.ini:/etc/php/8.1/fpm/conf.d/99-overrides.ini'
-  crontab-ui:
+      - ${DOCUMENT_ROOT-./public}:/var/www/html:rw
+      - ${PHP_INI-./docker/config/php/php.ini}:/usr/local/etc/php/php.ini
+      - ${SSL_DIR-./docker/config/ssl}:/etc/apache2/ssl/
+      - ${VHOSTS_DIR-./docker/config/vhosts}:/etc/apache2/sites-enabled
+      - ${LOG_DIR-./docker/logs/apache2}:/var/log/apache2
+      - ${XDEBUG_LOG_DIR-./docker/logs/xdebug}:/var/log/xdebug
+    environment:
+      APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT-/var/www/html}
+      PMA_PORT: ${HOST_MACHINE_PMA_PORT}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      HOST_MACHINE_MYSQL_PORT: ${HOST_MACHINE_MYSQL_PORT}
+      XDEBUG_CONFIG: "client_host=host.docker.internal remote_port=${XDEBUG_PORT}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  database:
+    build:
+      context: "./docker/bin/${DATABASE}"
+    container_name: "${COMPOSE_PROJECT_NAME}-${DATABASE}"
+    restart: "always"
     ports:
-      - '8009:8000'
-    image: alseambusher/crontab-ui
+      - "127.0.0.1:${HOST_MACHINE_MYSQL_PORT}:3306"
     volumes:
-      - '.:/application'
+      - ${MYSQL_INITDB_DIR-./docker/config/initdb}:/docker-entrypoint-initdb.d
+      - ${MYSQL_DATA_DIR-./docker/data/mysql}:/var/lib/mysql
+      - ${MYSQL_LOG_DIR-./docker/logs/mysql}:/var/log/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: "${COMPOSE_PROJECT_NAME}-phpmyadmin"
     links:
-      - webserver
-    depends_on:
-      - webserver
-  dozzle:
-    container_name: dozzle-viewer
-    hostname: dozzle
-    image: amir20/dozzle
+      - database
+    environment:
+      PMA_HOST: database
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      UPLOAD_LIMIT: ${UPLOAD_LIMIT}
+      MEMORY_LIMIT: ${MEMORY_LIMIT}
     ports:
-      - "8010:8080"
+      - "${HOST_MACHINE_PMA_PORT}:80"
+      - "${HOST_MACHINE_PMA_SECURE_PORT}:443"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /sessions
+      - ${PHP_INI-./docker/config/php/php.ini}:/usr/local/etc/php/conf.d/php-phpmyadmin.ini
+  redis:
+    container_name: "${COMPOSE_PROJECT_NAME}-redis"
+    image: redis:latest
+    ports:
+      - "127.0.0.1:${HOST_MACHINE_REDIS_PORT}:6379"
