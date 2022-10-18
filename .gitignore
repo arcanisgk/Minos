@@ -1,9 +1,3 @@
-.env
-/.env
-/.vscode
+.idea
 /docker/data/*
 /docker/logs/*
-.DS_Store
-/buildtest
-.sample.env
-todo.md
